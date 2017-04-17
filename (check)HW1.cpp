@@ -3,7 +3,7 @@
 
 int main()
 {
-	SetClass<int> Test{ 3,2,1,5,4,8,6,9,0 };
+	SetClass<int> Test{ 3,2,1,5,8,6,9,0 };
 	
 	std::cout << "Begin Before erase:" << *Test.begin() << std::endl; //0
 	Test.erase(0);
