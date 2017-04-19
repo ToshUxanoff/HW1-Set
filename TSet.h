@@ -123,19 +123,20 @@ private:
 			}
 			return *this;
 		}
+		
 		TSetIterator& operator++(int)
 		{
 			TSetIterator it(*this);
 			++*this;
 			return it;
 		}
-
 		TSetIterator& operator--(int)
 		{
 			TSetIterator it(*this);
 			--*this;
 			return it;
 		}
+		
 		reference operator*()
 		{
 			if (Ptr == nullptr)
@@ -162,9 +163,9 @@ private:
 		}
 	};
 private:
-	size_t Size = 0; 
 	TNode* Tree;
 	TNode* End;
+	Compare less; // less(x,y); true if x > y;
 	using iterator = TSetIterator;
 	using const_iterator = const TSetIterator;
 	void Insert_Branch(iterator it)// for Erase
@@ -174,7 +175,7 @@ private:
 		{
 			return;
 		}
-		if (pos.Ptr->Right != nullptr)
+		if (pos.Ptr->Right != End)
 		{
 			Insert_Branch(pos.Ptr->Right);
 		}
@@ -182,9 +183,28 @@ private:
 		{
 			Insert_Branch(pos.Ptr->Left);
 		}	
-		insert(pos.Ptr->Value);
-		Size--; //Т.к. вставляем старые. Удаляемый элемент уберет Erase.
+		insert(pos.Ptr->Value);	
 	} 
+	void EraseRoot() //for erase
+	{
+		if (Tree->Left == nullptr)
+		{
+			Tree = Tree->Right;
+		}
+		else if (Tree->Right == nullptr)
+		{
+			Tree = Tree->Left;
+		}
+		else
+		{
+			iterator LeftBranch = Tree->Left;
+			iterator RightBranch = Tree->Right;
+			Tree = nullptr;
+			Insert_Branch(RightBranch);
+			Insert_Branch(LeftBranch);
+		}
+		return;
+	}
 	void SearchEnd()
 	{
 		TNode* tmp = Tree;
@@ -211,12 +231,10 @@ private:
 		}
 		(*For_delete) = nullptr;
 		
-		Size = 0;
-	}
-	
+	}	
 public:
 
-	SetClass()
+	SetClass(const Compare& less = Compare())
 	{
 		Tree = nullptr;
 		End = nullptr;
@@ -228,10 +246,10 @@ public:
 			insert(*it);
 		}
 	}
-	SetClass(std::initializer_list<value_type> list) 
+	SetClass(std::initializer_list<value_type> list, const Compare& less = Compare())
 	{
 		Tree =  nullptr;
-		for (value_type item : list) 
+		for (const auto& item : list) 
 		{
 			insert(item);
 		}
@@ -319,79 +337,68 @@ public:
 	}
 	bool empty()
 	{
-		return (Size == 0);
+		return (size() == 0);
 	}
+
 	void erase(const key_type& key)
 	{
-		Size --;
-		if (Size == 0) 
-		{
-			Tree = nullptr;
-			delete Tree;	
-			return;
-		}
-		if (Tree->Value == key)
-		{
-			Tree = nullptr;
-		}
 		iterator Position = find(key);
-	
-		if (Position.Ptr == End->Up) //Если крайний правый - смещаем end.
-		{
-			End = Position.Ptr;
-			End->Up = Position.Ptr->Up;
-			return;
-		}
-		else if (Position.Ptr->Left == nullptr && Position.Ptr->Right == nullptr) // Если удаляемый - последний.
-		{
-		
-			if (Position.Ptr->Value < Position.Ptr->Up->Value) //Могут стоять другие элементы слева/справа. Это - чтобы не потерять связи
-			{
-				Position.Ptr->Up->Left = nullptr;
-			}
-			else
-			{
-				Position.Ptr->Up->Right = nullptr;
-			}
-		}
-		else if (Position.Ptr->Left != nullptr)
-		{
-			iterator for_insert_Left = Position.Ptr->Left;	
-			Position.Ptr->Up->Left = nullptr;
-			Insert_Branch(for_insert_Left);
-		}
-		else if (Position.Ptr->Right != nullptr)
-		{
-			iterator for_insert_Right = Position.Ptr->Right;
-			Position.Ptr->Up->Right = nullptr;
-			Insert_Branch(for_insert_Right);
-			
-		}	
-		Position.Ptr = nullptr;
+		erase(Position);
 		return;
 	}
-	void erase(iterator position)
+	void erase(iterator Position) //Простите за быдлокод, писал в 2 ночи
 	{
-		erase(*position);
+		if (Tree != nullptr)
+		{
+			if(Position == Tree)
+			{
+				EraseRoot();
+				return;
+			}
+			if (Position.Ptr == End->Up)	//Если крайний правый - смещаем end.
+			{
+				End = Position.Ptr;
+				End->Up = Position.Ptr->Up;
+				return;
+			}
+			else if (Position.Ptr->Left == nullptr && Position.Ptr->Right == nullptr) // Если удаляемый - последний.
+			{
+				//Могут стоять другие элементы слева/справа. Это - чтобы не потерять связи. Проверяем где именно стоит удаляемый, после чего на его место ставим nullptr
+				less(Position.Ptr->Value, Position.Ptr->Up->Value) ? (Position.Ptr->Up->Left = nullptr) : (Position.Ptr->Up->Right = nullptr);
+				return;
+			}
+			if (Position.Ptr->Left != nullptr)
+			{
+				iterator LeftBranch = Position.Ptr->Left;
+				Position.Ptr->Up->Left = nullptr;
+				Insert_Branch(LeftBranch);
+			}
+			else if(Position.Ptr->Right != nullptr)
+			{
+				iterator RightBranch = Position.Ptr->Right;
+				Position.Ptr->Up->Right = nullptr;
+				Insert_Branch(RightBranch);
+			}
+		
+			Position.Ptr = nullptr;
+		}
+		return;
 	}
+
 	void swap( SetClass& obj)
 	{
 		TNode* BufEnd = End;
 		TNode* Buf = Tree;
-		size_t BufSize = Size;
-
+		
 		End = obj.End;
 		Tree = obj.Tree;
-		Size = obj.Size;
-
+		
 		obj.Tree = Buf;
-		obj.Size = BufSize;
 		obj.End = BufEnd;
-
 		return;
 	}
 	iterator find(const Key& key)
-	{
+	{	
 		if (Tree == nullptr)
 		{
 			return End;
@@ -408,7 +415,7 @@ public:
 				iterator it(currNode);
 				return it;
 			}
-			if (currNode->Value < key)
+			if (less(currNode->Value, key))
 			{
 				currNode = currNode->Right;
 			}
@@ -416,10 +423,8 @@ public:
 			{
 				currNode = currNode->Left;
 			}
-			
-		} while (currNode);
 
-		
+		} while (currNode);		
 	}
 	size_type count(const Key& key)
 	{
@@ -431,15 +436,12 @@ public:
 	}
 	void insert(const value_type& value)
 	{
-		
 		if (Tree == nullptr)
 		{
 			Tree = new TNode(value);
-			Size++;
 			End = new TNode;
 			SearchEnd();		
 			return;
-
 		}
 		TNode * endNode = Tree;
 		TNode * prevNode = endNode;
@@ -452,7 +454,7 @@ public:
 			{
 				return;
 			}
-			if (endNode->Value < value)
+			if (less(endNode->Value, value))
 			{
 				endNode = endNode->Right;
 			}
@@ -464,21 +466,29 @@ public:
 
 		TNode * newNode = new TNode(value);
 
-		(prevNode->Value < value) ? prevNode->Right = newNode : prevNode->Left = newNode;
-		Size++;
+		(less(prevNode->Value, value)) ? prevNode->Right = newNode : prevNode->Left = newNode;
 		newNode->Up = prevNode;
 		SearchEnd();
 		return ;
 
 	}
-	size_type size() const
+	size_type size() 
 	{
-		return Size;
+		if (Tree != nullptr)
+		{
+			size_t Size = 0;
+			for (iterator it = begin(); it != end(); ++it)
+			{
+				Size++;
+			}
+			return Size;
+		}
+		return 0;
 	}
 	iterator lower_bound(const Key& key)
 	{
 		iterator it = begin();
-		while (*it < key && it!= end())
+		while (less(*it, key) && it!= end())
 		{
 			++it;
 		}
@@ -487,7 +497,7 @@ public:
 	iterator upper_bound(const Key& key)
 	{
 		iterator it = begin();
-		while (*it <= key && it != end())
+		while (!less(key, *it) && it != end())
 		{
 			++it;
 		}
@@ -495,28 +505,26 @@ public:
 	}
 	bool operator ==(const SetClass& obj)
 	{
-		if (Size != obj.Size)
+		if (size() != obj.size())
 		{
 			return false;
-		}
-		if (Tree == nullptr && obj.Tree == nullptr)
-		{
-			return true;
-		}
+		}	
 		else if (Tree != nullptr && obj.Tree != nullptr)
-		{
-			iterator tree1 = this->cbegin();
+		{		
 			iterator tree2 = obj.cbegin();
-			obj.Tree;
-			for (size_t i = 0; i < Size; ++i, ++tree1, ++tree2)
+			for (iterator tree1 = cbegin(); tree1 != cend(); ++tree1, ++tree2)
 			{
 				if ((*tree1) != (*tree2))
 				{
 					return false;
 				}
-			}
-			return true;
+			}		
 		}
-		return false;
+		return true;
 	}
 };
+template <class T, class Compare>
+void swap(SetClass<T, Compare>& lhs, SetClass <T, Compare>& rhs)
+{
+	lhs.swap(rhs);
+}
