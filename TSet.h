@@ -15,7 +15,7 @@ public:
 private:
 	struct TNode
 	{
-		key_type Value;
+		value_type Value;
 		TNode* Right;
 		TNode* Left;
 		TNode* Up;
@@ -27,8 +27,7 @@ private:
 			, Up(nullptr)
 		{ }
 		TNode()
-			: Value(0)
-			, Right(nullptr)
+			: Right(nullptr)
 			, Left(nullptr)
 			, Up(nullptr)
 		{ }
@@ -51,16 +50,19 @@ private:
 		~TSetIterator() = default;
 
 
-		bool operator=(const TSetIterator &iterator)
+		TSetIterator& operator=(const TSetIterator &iterator)
 		{
 			Ptr = iterator.Ptr;
-			return Ptr;
+			return *this;
 		}
 		bool operator !=(const TSetIterator& iterator)
 		{
 			return Ptr != iterator.Ptr;
 		}
-		
+		bool operator ==(const TSetIterator& iterator)
+		{
+			return Ptr == iterator.Ptr;
+		}
 		TSetIterator& operator++()
 		{
 			if (Ptr == nullptr)
@@ -76,7 +78,7 @@ private:
 				}
 				return *this;
 			}
-			else 
+			else if(Ptr->Up != nullptr)
 			{
 				TNode *prevPtr = Ptr;
 				Ptr = Ptr->Up;
@@ -120,6 +122,19 @@ private:
 				}
 			}
 			return *this;
+		}
+		TSetIterator& operator++(int)
+		{
+			TSetIterator it(*this);
+			++*this;
+			return it;
+		}
+
+		TSetIterator& operator--(int)
+		{
+			TSetIterator it(*this);
+			--*this;
+			return it;
 		}
 		reference operator*()
 		{
@@ -204,6 +219,14 @@ public:
 	SetClass()
 	{
 		Tree = nullptr;
+		End = nullptr;
+	}
+	SetClass(const SetClass & obj)
+	{
+		for (iterator it = obj.cbegin(); it != obj.cend(); ++it)
+		{
+			insert(*it);
+		}
 	}
 	SetClass(std::initializer_list<value_type> list) 
 	{
@@ -217,9 +240,28 @@ public:
 	{
 		DeleteTree(&Tree);
 	}
-	iterator begin()
+	SetClass& operator=(const SetClass& obj)
 	{
+		DeleteTree(&Tree);
+		for (iterator it = obj.cbegin(); it != obj.cend(); ++it)
+		{
+			insert(*it);
+		}
+		return *this;
+	}
+	iterator begin()
+	{ 
+		if (Tree == nullptr)
+		{
+			throw std::exception("Tree is nullptr");
+		}
 		TNode* tmp = Tree;
+		if (tmp->Left == nullptr || tmp->Right == nullptr)
+		{
+			iterator it(tmp);
+			return it;
+		}
+
 		do
 		{
 			if (tmp->Left == nullptr && tmp->Right == nullptr)
@@ -239,6 +281,10 @@ public:
 	}
 	const_iterator cbegin() const
 	{
+		if (Tree == nullptr)
+		{
+			throw std::exception("Tree is nullptr");
+		}
 		TNode* tmp = Tree;
 		do
 		{
@@ -271,6 +317,10 @@ public:
 	{
 		DeleteTree(&Tree);
 	}
+	bool empty()
+	{
+		return (Size == 0);
+	}
 	void erase(const key_type& key)
 	{
 		Size --;
@@ -282,8 +332,7 @@ public:
 		}
 		if (Tree->Value == key)
 		{
-			DeleteTree(&Tree);
-			return;
+			Tree = nullptr;
 		}
 		iterator Position = find(key);
 	
@@ -321,11 +370,39 @@ public:
 		Position.Ptr = nullptr;
 		return;
 	}
+	void erase(iterator position)
+	{
+		erase(*position);
+	}
+	void swap( SetClass& obj)
+	{
+		TNode* BufEnd = End;
+		TNode* Buf = Tree;
+		size_t BufSize = Size;
+
+		End = obj.End;
+		Tree = obj.Tree;
+		Size = obj.Size;
+
+		obj.Tree = Buf;
+		obj.Size = BufSize;
+		obj.End = BufEnd;
+
+		return;
+	}
 	iterator find(const Key& key)
 	{
+		if (Tree == nullptr)
+		{
+			return End;
+		}
 		TNode * currNode = Tree;
 		do
 		{
+			if (currNode == End || currNode == nullptr)
+			{
+				return end();
+			}
 			if (currNode->Value == key)
 			{
 				iterator it(currNode);
@@ -339,9 +416,10 @@ public:
 			{
 				currNode = currNode->Left;
 			}
+			
 		} while (currNode);
 
-		return end();
+		
 	}
 	size_type count(const Key& key)
 	{
@@ -353,6 +431,7 @@ public:
 	}
 	void insert(const value_type& value)
 	{
+		
 		if (Tree == nullptr)
 		{
 			Tree = new TNode(value);
@@ -414,7 +493,7 @@ public:
 		}
 		return it;
 	}
-	bool operator ==(SetClass& obj)
+	bool operator ==(const SetClass& obj)
 	{
 		if (Size != obj.Size)
 		{
@@ -426,8 +505,8 @@ public:
 		}
 		else if (Tree != nullptr && obj.Tree != nullptr)
 		{
-			iterator tree1 = this->begin();
-			iterator tree2 = obj.begin();
+			iterator tree1 = this->cbegin();
+			iterator tree2 = obj.cbegin();
 			obj.Tree;
 			for (size_t i = 0; i < Size; ++i, ++tree1, ++tree2)
 			{
