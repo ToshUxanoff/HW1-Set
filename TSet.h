@@ -165,7 +165,7 @@ private:
 private:
 	TNode* Tree;
 	TNode* End;
-	Compare less; // less(x,y); true if x > y;
+	Compare less; 
 	using iterator = TSetIterator;
 	using const_iterator = const TSetIterator;
 	void Insert_Branch(iterator it)// for Erase
@@ -234,10 +234,11 @@ private:
 	}	
 public:
 
-	SetClass(const Compare& less = Compare())
+	SetClass(const Compare& comp = Compare())
 	{
 		Tree = nullptr;
-		End = nullptr;
+		End = nullptr; 
+		less = comp;
 	}
 	SetClass(const SetClass & obj)
 	{
@@ -246,9 +247,10 @@ public:
 			insert(*it);
 		}
 	}
-	SetClass(std::initializer_list<value_type> list, const Compare& less = Compare())
+	SetClass(std::initializer_list<value_type> list, const Compare& comp = Compare())
 	{
 		Tree =  nullptr;
+		less = comp;
 		for (const auto& item : list) 
 		{
 			insert(item);
@@ -346,41 +348,40 @@ public:
 		erase(Position);
 		return;
 	}
-	void erase(iterator Position) //Простите за быдлокод, писал в 2 ночи
+	void erase(iterator Position) 
 	{
 		if (Tree != nullptr)
 		{
 			if(Position == Tree)
 			{
-				EraseRoot();
+				EraseRoot(); 
 				return;
 			}
-			if (Position.Ptr == End->Up)	//Если крайний правый - смещаем end.
+			if (Position.Ptr == End->Up)	//Если удаляемый - крайний правый: смещаем end на узел вверх.
 			{
 				End = Position.Ptr;
 				End->Up = Position.Ptr->Up;
 				return;
 			}
-			else if (Position.Ptr->Left == nullptr && Position.Ptr->Right == nullptr) // Если удаляемый - последний.
+			else if (Position.Ptr->Left == nullptr && Position.Ptr->Right == nullptr) // Если удаляемый - "лист" дерева.
 			{
-				//Могут стоять другие элементы слева/справа. Это - чтобы не потерять связи. Проверяем где именно стоит удаляемый, после чего на его место ставим nullptr
-				less(Position.Ptr->Value, Position.Ptr->Up->Value) ? (Position.Ptr->Up->Left = nullptr) : (Position.Ptr->Up->Right = nullptr);
+				//У элемента выше удаляемого, могут стоять другие элементы слева/справа(не 0). Это - чтобы не потерять связи из-за возможного присвоения nullptr.
+				less(Position.Ptr->Value, Position.Ptr->Up->Value) ? (Position.Ptr->Up->Left = nullptr) 
+					: (Position.Ptr->Up->Right = nullptr);
 				return;
 			}
-			if (Position.Ptr->Left != nullptr)
-			{
-				iterator LeftBranch = Position.Ptr->Left;
-				Position.Ptr->Up->Left = nullptr;
-				Insert_Branch(LeftBranch);
-			}
-			else if(Position.Ptr->Right != nullptr)
-			{
-				iterator RightBranch = Position.Ptr->Right;
-				Position.Ptr->Up->Right = nullptr;
-				Insert_Branch(RightBranch);
-			}
+			
+			iterator LeftBranch = Position.Ptr->Left;
+			Position.Ptr->Up->Left = nullptr;
 		
+			iterator RightBranch = Position.Ptr->Right;
+			Position.Ptr->Up->Right = nullptr;
+
+			Insert_Branch(RightBranch);
+			Insert_Branch(LeftBranch);
+
 			Position.Ptr = nullptr;
+			delete Position.Ptr;
 		}
 		return;
 	}
@@ -410,7 +411,7 @@ public:
 			{
 				return end();
 			}
-			if (currNode->Value == key)
+			if (!less(currNode->Value,key)&&!less(key, currNode->Value)) //== here
 			{
 				iterator it(currNode);
 				return it;
@@ -450,7 +451,7 @@ public:
 		{
 			prevNode = endNode;
 
-			if (endNode->Value == value)
+			if (!less(endNode->Value, value) && !less(value, endNode->Value)) //== here
 			{
 				return;
 			}
