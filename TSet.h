@@ -170,20 +170,23 @@ private:
 	using const_iterator = const TSetIterator;
 	void Insert_Branch(iterator it)// for Erase
 	{
-		iterator pos(it);
-		if (pos.Ptr == nullptr)
+		if (it != nullptr)
 		{
-			return;
+			iterator pos(it);
+			if (pos.Ptr == nullptr)
+			{
+				return;
+			}
+			if (pos.Ptr->Right != End)
+			{
+				Insert_Branch(pos.Ptr->Right);
+			}
+			if (pos.Ptr->Left != nullptr)
+			{
+				Insert_Branch(pos.Ptr->Left);
+			}
+			insert(pos.Ptr->Value);
 		}
-		if (pos.Ptr->Right != End)
-		{
-			Insert_Branch(pos.Ptr->Right);
-		}
-		if (pos.Ptr->Left != nullptr)
-		{
-			Insert_Branch(pos.Ptr->Left);
-		}	
-		insert(pos.Ptr->Value);	
 	} 
 	void EraseRoot() //for erase
 	{
@@ -215,23 +218,7 @@ private:
 		tmp->Right = End;
 		End->Up = tmp;		
 	}	
-	void DeleteTree(TNode **For_delete)
-	{
-		if ((*For_delete) == nullptr)
-		{
-			return;
-		}
-		if ((*For_delete)->Left != nullptr)
-		{
-			DeleteTree(&((*For_delete)->Left));
-		}
-		if ((*For_delete)->Right != nullptr)
-		{
-			DeleteTree(&((*For_delete)->Right));
-		}
-		(*For_delete) = nullptr;
-		
-	}	
+	
 public:
 
 	SetClass(const Compare& comp = Compare())
@@ -258,11 +245,15 @@ public:
 	}
 	~SetClass()
 	{
-		DeleteTree(&Tree);
+		delete Tree;
 	}
 	SetClass& operator=(const SetClass& obj)
 	{
-		DeleteTree(&Tree);
+		if (Tree == obj.Tree)
+		{
+			return *this;
+		}
+		delete Tree;
 		for (iterator it = obj.cbegin(); it != obj.cend(); ++it)
 		{
 			insert(*it);
@@ -335,7 +326,8 @@ public:
 	}
 	void clear()
 	{
-		DeleteTree(&Tree);
+		delete Tree;
+		Tree = nullptr;
 	}
 	bool empty()
 	{
@@ -380,8 +372,8 @@ public:
 			Insert_Branch(RightBranch);
 			Insert_Branch(LeftBranch);
 
-			Position.Ptr = nullptr;
 			delete Position.Ptr;
+
 		}
 		return;
 	}
