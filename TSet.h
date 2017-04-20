@@ -227,7 +227,10 @@ public:
 	}
 	SetClass(const SetClass & obj)
 	{
-		if(Tree) clear();
+		if (Tree)
+		{
+			clear();
+		}
 		for (iterator it = obj.cbegin(); it != obj.cend(); ++it)
 		{
 			insert(*it);
@@ -248,7 +251,7 @@ public:
 	}
 	SetClass& operator=(const SetClass& obj)
 	{
-		if (Tree == obj.Tree || this == &obj)
+		if (Tree == obj.Tree)
 		{
 			return *this;
 		}
@@ -298,7 +301,7 @@ public:
 		TNode* tmp = Tree;
 		if (tmp->Left == nullptr || tmp->Right == nullptr)
 		{
-			iterator it(tmp);
+			const_iterator it(tmp);
 			return it;
 		}
 
@@ -306,7 +309,7 @@ public:
 		{
 			if (tmp->Left == nullptr && tmp->Right == nullptr)
 			{
-				iterator it(tmp);
+				const_iterator it(tmp);
 				return it;
 			}
 			else if (tmp->Left != nullptr)
